@@ -1,0 +1,10 @@
+
+bin/test-14.x: file format elf32-littleriscv
+
+SYMBOL TABLE:
+000110b8 l .text 00000000 fi
+0000001a l *ABS* 00000000 l
+000110d0 l .text 00000000 loop
+000110cc l .text 00000000 rocks
+0000002f l *ABS* 00000000 then
+000110b4 g .text 00000000 _start

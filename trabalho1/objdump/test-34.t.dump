@@ -1,0 +1,10 @@
+
+bin/test-34.x: file format elf32-littleriscv
+
+SYMBOL TABLE:
+0001211d l .data 00000000 IC
+00012116 l .data 00000000 are
+000110d4 g .text 00000000 _start
+0001210d g .data 00000000 magic
+00012111 g .data 00000000 monitor
+00012118 g .data 00000000 z

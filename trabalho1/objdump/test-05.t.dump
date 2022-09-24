@@ -1,0 +1,5 @@
+
+bin/test-05.x: file format elf32-littleriscv
+
+SYMBOL TABLE:
+000110b4 g .text 00000000 _start

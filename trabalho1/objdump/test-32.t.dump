@@ -1,0 +1,8 @@
+
+bin/test-32.x: file format elf32-littleriscv
+
+SYMBOL TABLE:
+000110d0 l .text 00000000 discovery
+000110c0 l .text 00000000 unicamp
+000110d8 l .text 00000000 y
+000110b4 g .text 00000000 _start

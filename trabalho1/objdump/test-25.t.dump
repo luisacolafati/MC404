@@ -1,0 +1,9 @@
+
+bin/test-25.x: file format elf32-littleriscv
+
+SYMBOL TABLE:
+00011100 l .text 00000000 people
+000110d4 g .text 00000000 _start
+00012117 g .bss 00000000 are
+0001210f g .bss 00000000 fi
+00012113 g .bss 00000000 the

@@ -1,0 +1,3 @@
+/home/luisa/Desktop/unicamp/MC404/trabalho1/cmake-build-debug/CMakeFiles/trabalho1.dir
+/home/luisa/Desktop/unicamp/MC404/trabalho1/cmake-build-debug/CMakeFiles/edit_cache.dir
+/home/luisa/Desktop/unicamp/MC404/trabalho1/cmake-build-debug/CMakeFiles/rebuild_cache.dir

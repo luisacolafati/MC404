@@ -1,0 +1,14 @@
+
+bin/test-35.x: file format elf32-littleriscv
+
+Sections:
+Idx Name Size VMA
+0 00000000 00000000
+1 .text 00000030 000110d4
+2 .data 0000000d 00012104
+3 .bss 0000000e 00012111
+4 .comment 00000013 00000000
+5 .symtab 000000d0 00000000
+6 .shstrtab 00000035 00000000
+7 .strtab 00000042 00000000
+

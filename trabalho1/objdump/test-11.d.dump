@@ -1,0 +1,17 @@
+
+bin/test-11.x: file format elf32-littleriscv
+
+
+Disassembly of section .text:
+
+000110d4 <_start>:
+110d4: 23 24 81 04 sw s0, 72(sp)
+110d8: 03 06 05 00 lb a2, 0(a0)
+110dc: 23 2e a4 fc sw a0, -36(s0)
+110e0: 33 45 73 00 xor a0, t1, t2
+110e4: 93 95 25 00 slli a1, a1, 2
+110e8: e3 86 c5 fe beq a1, a2, 0x110d4 <_start>
+110ec: 13 01 01 05 addi sp, sp, 80
+110f0: ef f0 5f fe jal ra, 0x110d4 <_start>
+110f4: 93 05 00 00 addi a1, zero, 0
+110f8: 13 01 01 fb addi sp, sp, -80

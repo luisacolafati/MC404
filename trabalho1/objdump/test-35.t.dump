@@ -1,0 +1,16 @@
+
+bin/test-35.x: file format elf32-littleriscv
+
+SYMBOL TABLE:
+00000025 l *ABS* 00000000 IC
+0001210c l .data 00000000 loop
+00012108 l .data 00000000 magic
+00012111 l .data 00000000 mc404
+0001211c l .bss 00000000 monitor
+00012117 l .bss 00000000 rocks
+0001211f l .bss 00000000 then
+00000023 l *ABS* 00000000 there
+0000005f l *ABS* 00000000 x
+00012110 l .data 00000000 z
+000110d4 g .text 00000000 _start
+00012115 g .bss 00000000 assembly
