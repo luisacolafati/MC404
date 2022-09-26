@@ -2,32 +2,36 @@
 #include <fcntl.h>
 #include <unistd.h>
 //-----------------------------------------------------------
-#define MAX_FILE_SIZE 10000
-#define ERROR_OPENING_FILE -1
-#define NUMBER_OF_BYTES_IN_SECTION 40
-#define SECTION_OFFSET_SIZE_IN_BYTES 4
-#define SECTION_SIZE_IN_BYTES 4
+
+#define MAX_FILE_SIZE_IN_BYTES 10000
+#define EXIT_PROGRAM_CODE -1
+#define SECTION_SIZE_IN_BYTES 40
 #define SECTION_PROPERTIES_SIZE_IN_BYTES 4
 #define MAX_SECTION_NAME_SIZE 10
+#define BYTE_SIZE 8
+
 //-----------------------------------------------------------
+
 typedef struct {
     char printSectionTable;
     char printSymbolTable;
     char printTextSection;
-} ExecutionFlags;
+} CommandFlags;
 
-ExecutionFlags executionFlags;
+CommandFlags FLAGS;
 
 void initializeExecutionFlags() {
-    executionFlags.printSectionTable = 'h';
-    executionFlags.printSymbolTable = 't';
-    executionFlags.printTextSection = 'd';
+    FLAGS.printSectionTable = 'h';
+    FLAGS.printSymbolTable = 't';
+    FLAGS.printTextSection = 'd';
 };
+
 //-----------------------------------------------------------
+
 typedef struct {
     int offset;
     int size;
-    int value;
+    int decimalValue;
 } HeaderProperties;
 
 typedef struct {
@@ -38,20 +42,8 @@ typedef struct {
 
 FileHeaders FILE_HEADERS;
 
-void initializeFileHeaders() {
-    FILE_HEADERS.e_shoff.offset = 32;
-    FILE_HEADERS.e_shoff.size = 4;
-    FILE_HEADERS.e_shoff.value = 0;
-
-    FILE_HEADERS.e_shnum.offset = 48;
-    FILE_HEADERS.e_shnum.size = 2;
-    FILE_HEADERS.e_shnum.value = 0;
-
-    FILE_HEADERS.e_shstrndx.offset = 50;
-    FILE_HEADERS.e_shstrndx.size = 2;
-    FILE_HEADERS.e_shstrndx.value = 0;
-}
 //-----------------------------------------------------------
+
 typedef struct {
     int index;
     char *name;
@@ -59,13 +51,26 @@ typedef struct {
     char *vma;
 } Section;
 
-typedef struct {
-    Section *sections;
-    int numberOfSections;
-} SectionsTable;
-
-SectionsTable SECTIONS_TABLE;
 //-----------------------------------------------------------
+
+char removeTraceFromFlag(char *flag) {
+    return flag[0] == '-' ?  flag[1] : flag[0];
+}
+
+//-----------------------------------------------------------
+
+char *readBytesFromFile(unsigned char *fileContent, char *arr, int init, int size) {
+    char auxArr[SECTION_PROPERTIES_SIZE_IN_BYTES];
+    int end = init + size - 1, index = 0;
+    for (int i = end; i >= init; i--) {
+        arr[index] = fileContent[i];
+        index++;
+    }
+    arr[index] = '\0';
+}
+
+//-----------------------------------------------------------
+
 int exponential(int base, int exponent) {
     if (exponent == 0)
         return 1;
@@ -81,129 +86,173 @@ int convertMultipleBytesToDecimal (unsigned char *bytes, int size) {
     }
     return decimalValue;
 }
-//-----------------------------------------------------------
-int getE_shoffValue(unsigned char *fileContent) {
-    unsigned char e_shoff[FILE_HEADERS.e_shoff.size];
-    int initOffsite = FILE_HEADERS.e_shoff.offset,
-        endOffsite = initOffsite + FILE_HEADERS.e_shoff.size - 1,
+
+int getDecimalValueOfFileHeaderProperty (unsigned char *fileContent, HeaderProperties hp) {
+    unsigned char headerProperty[hp.size];
+    int initOffset = hp.offset,
+        endOffset = initOffset + hp.size - 1,
         index = 0;
 
-    for (int i = endOffsite; i >= initOffsite; i--) {
-        e_shoff[index++] = fileContent[i];
+    for (int i = endOffset; i >= initOffset; i--) {
+        headerProperty[index++] = fileContent[i];
     }
 
-    return convertMultipleBytesToDecimal(e_shoff, FILE_HEADERS.e_shoff.size);
+    return convertMultipleBytesToDecimal(headerProperty, hp.size);
 }
 
-int getE_shnumValue(unsigned char *fileContent) {
-    unsigned char e_shnum[FILE_HEADERS.e_shnum.size];
-    int initOffsite = FILE_HEADERS.e_shnum.offset,
-            endOffsite = initOffsite + FILE_HEADERS.e_shnum.size - 1,
-            index = 0;
+char convertIntToNumericCharacter(int num) {
+    return (char)(num + '0');
+}
 
-    for (int i = endOffsite; i >= initOffsite; i--) {
-        e_shnum[index++] = fileContent[i];
+char convertIntToAlfabeticCharacter(int num) {
+    return (char)(num + 'a');
+}
+
+void convertDecimalToHexadecimal (int decimal, char *hexadecimal) {
+    int counter = 0, rest;
+    char invertedHexNumber[BYTE_SIZE];
+
+    do {
+        rest = decimal % 16;
+        invertedHexNumber[counter] = rest < 10 ? convertIntToNumericCharacter(rest) : convertIntToAlfabeticCharacter(rest - 10);
+        decimal = decimal / 16;
+        counter++;
+    } while(decimal != 0);
+
+    for (int i = counter; i < BYTE_SIZE; i++) {
+        invertedHexNumber[i] = '0';
     }
 
-    return convertMultipleBytesToDecimal(e_shnum, FILE_HEADERS.e_shnum.size);
-}
-
-int getE_shstrndxValue(unsigned char *fileContent) {
-    unsigned char e_shstrndx[FILE_HEADERS.e_shstrndx.size];
-    int initOffsite = FILE_HEADERS.e_shstrndx.offset,
-            endOffsite = initOffsite + FILE_HEADERS.e_shstrndx.size - 1,
-            index = 0;
-
-    for (int i = endOffsite; i >= initOffsite; i--) {
-        e_shstrndx[index++] = fileContent[i];
+    for (int j = 0; j < counter; j++) {
+        hexadecimal[counter - (j + 1)] = invertedHexNumber[j];
     }
-
-    return convertMultipleBytesToDecimal(e_shstrndx, FILE_HEADERS.e_shstrndx.size);
+    hexadecimal[counter] = '\0';
 }
 
-void setHeadersFromFile (unsigned char *fileContent) {
-    FILE_HEADERS.e_shoff.value = getE_shoffValue(fileContent);
-    FILE_HEADERS.e_shnum.value = getE_shnumValue(fileContent);
-    FILE_HEADERS.e_shstrndx.value = getE_shstrndxValue(fileContent);
+void initializeFileHeaders(unsigned char *fileContent) {
+    FILE_HEADERS.e_shoff.offset = 32;
+    FILE_HEADERS.e_shoff.size = 4;
+    FILE_HEADERS.e_shoff.decimalValue = getDecimalValueOfFileHeaderProperty(fileContent, FILE_HEADERS.e_shoff);
+
+    FILE_HEADERS.e_shnum.offset = 48;
+    FILE_HEADERS.e_shnum.size = 2;
+    FILE_HEADERS.e_shnum.decimalValue = getDecimalValueOfFileHeaderProperty(fileContent, FILE_HEADERS.e_shnum);
+
+    FILE_HEADERS.e_shstrndx.offset = 50;
+    FILE_HEADERS.e_shstrndx.size = 2;
+    FILE_HEADERS.e_shstrndx.decimalValue = getDecimalValueOfFileHeaderProperty(fileContent, FILE_HEADERS.e_shstrndx);
 }
+
 //-----------------------------------------------------------
-char *getSectionName (unsigned char *fileContent, int sectionInit) {
-    char name[MAX_SECTION_NAME_SIZE];
-    int index = sectionInit;
 
-    while(fileContent[index] != 0) {
-        name[index - sectionInit] = fileContent[index];
+int getShstrtabSectionInit (unsigned char *fileContent) {
+    int sectionIndex = FILE_HEADERS.e_shstrndx.decimalValue,
+        sectionInit = FILE_HEADERS.e_shoff.decimalValue + sectionIndex * SECTION_SIZE_IN_BYTES,
+        offsetInit = sectionInit + 16;
+
+    char offset[SECTION_PROPERTIES_SIZE_IN_BYTES];
+    readBytesFromFile(fileContent, offset, offsetInit, SECTION_PROPERTIES_SIZE_IN_BYTES);
+
+    return convertMultipleBytesToDecimal(offset, SECTION_PROPERTIES_SIZE_IN_BYTES);
+}
+
+int getNameOffset(unsigned char *fileContent, int sectionInit) {
+    char offset[SECTION_PROPERTIES_SIZE_IN_BYTES];
+    readBytesFromFile(fileContent, offset, sectionInit, SECTION_PROPERTIES_SIZE_IN_BYTES);
+
+    return convertMultipleBytesToDecimal(offset, SECTION_PROPERTIES_SIZE_IN_BYTES);
+}
+
+void setSectionName (char *name, unsigned char *fileContent, int sectionInit) {
+    int nameOffset = getNameOffset(fileContent, sectionInit);
+    int nameInit = getShstrtabSectionInit(fileContent) + nameOffset;
+
+    int index = 0;
+    while((int)fileContent[nameInit + index] != 0) {
+        name[index] = fileContent[nameInit + index];
+        index++;
+    }
+    name[index] = '\0';
+}
+
+void setSectionVMA (char *vma, unsigned char *fileContent, int sectionInit) {
+    unsigned char binaryVma[SECTION_PROPERTIES_SIZE_IN_BYTES];
+
+    int index = 0;
+    for (int i = sectionInit + 15; i >= sectionInit + 12; i--) {
+        binaryVma[index] = fileContent[i];
         index++;
     }
 
-    return *name;
+    int decimalVma = convertMultipleBytesToDecimal(binaryVma, SECTION_PROPERTIES_SIZE_IN_BYTES);
+    convertDecimalToHexadecimal(decimalVma, vma);
 }
 
-char *getSectionVMA (unsigned char *fileContent, int sectionInit) {
-    char vma[SECTION_PROPERTIES_SIZE_IN_BYTES];
+void setSectionSize (char *size, unsigned char *fileContent, int sectionInit) {
+    unsigned char binarySize[SECTION_PROPERTIES_SIZE_IN_BYTES];
+
     int index = 0;
-
-    for(int i = sectionInit + 12; i <= SECTION_PROPERTIES_SIZE_IN_BYTES; i++) {
-        vma[i] = fileContent[i];
+    for (int i = sectionInit + 23; i >= sectionInit + 20; i--) {
+        binarySize[index] = fileContent[i];
+        index++;
     }
 
-    return vma;
+    int decimalSize = convertMultipleBytesToDecimal(binarySize, SECTION_PROPERTIES_SIZE_IN_BYTES);
+    convertDecimalToHexadecimal(decimalSize, size);
 }
 
-char *getSectionSize (unsigned char *fileContent, int sectionInit) {
-    char size[SECTION_PROPERTIES_SIZE_IN_BYTES];
-    int index = 0;
-
-    for(int i = sectionInit + 20; i <= SECTION_PROPERTIES_SIZE_IN_BYTES; i++) {
-        size[i] = fileContent[i];
+int getSizeOfString (char *str) {
+    int size = 0;
+    while (str[size] != '\0') {
+        size++;
     }
-
-    return size;
+    return size - 1;
 }
 
-void setSectionsInTable (unsigned char *fileContent) {
-    Section s, sections[FILE_HEADERS.e_shnum.value];
-    int sectionsInit = FILE_HEADERS.e_shoff.value,
-        sectionsEnd = sectionsInit + FILE_HEADERS.e_shnum.value * NUMBER_OF_BYTES_IN_SECTION,
-        index = 0;
+Section getSection (unsigned char *fileContent, int sectionInit, int sectionIndex) {
+    Section s;
+    char name[MAX_SECTION_NAME_SIZE], vma[BYTE_SIZE], size[BYTE_SIZE];
 
-    for (int i = sectionsInit; i < sectionsEnd; i+= NUMBER_OF_BYTES_IN_SECTION) {
-        s.index = i;
-        s.name = getSectionName(fileContent, i);
-        s.vma = getSectionVMA(fileContent, i);
-        s.size = getSectionSize(fileContent, i);
-        sections[index++] = s;
+    setSectionName(&name, fileContent, sectionInit);
+    setSectionSize(&size, fileContent, sectionInit);
+    setSectionVMA(&vma, fileContent, sectionInit);
+
+    s.index = sectionIndex;
+    s.name = name;
+    s.size = size;
+    s.vma = vma;
+
+    return s;
+}
+
+Section *buildAndPrintSectionsTable (unsigned char *fileContent) {
+    int numberOfSections = FILE_HEADERS.e_shnum.decimalValue,
+        sectionInit = FILE_HEADERS.e_shoff.decimalValue;
+    Section section;
+
+    printf("\nSections:");
+    printf("\nIdx\tName\tSize\tVMA");
+
+    for (int i = 0; i < numberOfSections; i++) {
+        section = getSection(fileContent, sectionInit, i);
+        printf("\n%d\t%s\t%s\t%s", section.index, section.name, section.size, section.vma);
+        sectionInit += SECTION_SIZE_IN_BYTES;
     }
-
-    SECTIONS_TABLE.sections = sections;
-    SECTIONS_TABLE.numberOfSections = FILE_HEADERS.e_shnum.value;
 }
 
-void printSectionsTable () {
-    printf("Sections:\n");
-    printf("Idx\tName\tSize\tVMA");
-    for (int i = 0; i < SECTIONS_TABLE.numberOfSections; i++) {
-        printf("\n%d\t%s\t%s\t%s", SECTIONS_TABLE.sections[i].index, SECTIONS_TABLE.sections[i].name, SECTIONS_TABLE.sections[i].size, SECTIONS_TABLE.sections[i].vma);
-    }
-}
 //-----------------------------------------------------------
-char getFlagValue(char *flag) {
-    return flag[0] == '-' ?  flag[1] : flag[0];
-}
+void executeDecodification (unsigned char *fileContent, char *flagWithTracePrefix) {
+    char flag = removeTraceFromFlag(flagWithTracePrefix);
 
-void executeDecodification (unsigned char *fileContent, char *executionOption) {
-    char flag = getFlagValue(executionOption);
-
-    if (flag == executionFlags.printSectionTable) {
-        setSectionsInTable(fileContent);
-        printSectionsTable();
+    if (flag == FLAGS.printSectionTable) {
+        buildAndPrintSectionsTable(fileContent);
     }
 
-    else if (flag == executionFlags.printSymbolTable) {
+    else if (flag == FLAGS.printSymbolTable) {
         //TODO: implement getSymbolTable()
     }
 
-    else if (flag == executionFlags.printTextSection) {
+    else if (flag == FLAGS.printTextSection) {
         // TODO: implement getTextSection()
     }
 }
@@ -212,21 +261,20 @@ int main(int argc, char *argv[]) {
     initializeExecutionFlags();
 
     // char *executionOption = argv[1];
-    char *executionOption = "-h";
+    char *flag = "-h";
     // char *fileName = argv[2];
     char *fileName = "../bin/test-00.x";
-    unsigned char fileContent[MAX_FILE_SIZE];
+    unsigned char fileContent[MAX_FILE_SIZE_IN_BYTES];
 
     int file = open(fileName, O_RDONLY);
-    if (file == ERROR_OPENING_FILE) {
+    if (file == EXIT_PROGRAM_CODE) {
         return -1;
     }
-    read(file, fileContent, MAX_FILE_SIZE);
+    read(file, fileContent, MAX_FILE_SIZE_IN_BYTES);
 
-    initializeFileHeaders();
-    setHeadersFromFile(fileContent);
+    initializeFileHeaders(fileContent);
 
-    executeDecodification(fileContent, executionOption);
+    executeDecodification(fileContent, flag);
 
     close(file);
 
