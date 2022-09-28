@@ -7,6 +7,7 @@
 #define EXIT_PROGRAM_CODE -1
 #define SECTION_SIZE_IN_BYTES 40
 #define SECTION_PROPERTIES_SIZE_IN_BYTES 4
+#define START_OFFSET_OF_NAMES_IN_SECTION_SHSTRNDX 16
 #define MAX_SECTION_NAME_SIZE 10
 #define BYTE_SIZE 8
 
@@ -20,7 +21,7 @@ typedef struct {
 
 CommandFlags FLAGS;
 
-void initializeExecutionFlags() {
+void initializeCommandFlags() {
     FLAGS.printSectionTable = 'h';
     FLAGS.printSymbolTable = 't';
     FLAGS.printTextSection = 'd';
@@ -32,6 +33,7 @@ typedef struct {
     int offset;
     int size;
     int decimalValue;
+    char *hexadecimalValue;
 } HeaderProperties;
 
 typedef struct {
@@ -45,29 +47,19 @@ FileHeaders FILE_HEADERS;
 //-----------------------------------------------------------
 
 typedef struct {
+    HeaderProperties sh_name;
+    HeaderProperties sh_size;
+    HeaderProperties sh_addr;
+} SectionHeaders;
+
+SectionHeaders SECTION_HEADERS;
+
+typedef struct {
     int index;
     char *name;
     char *size;
     char *vma;
 } Section;
-
-//-----------------------------------------------------------
-
-char removeTraceFromFlag(char *flag) {
-    return flag[0] == '-' ?  flag[1] : flag[0];
-}
-
-//-----------------------------------------------------------
-
-char *readBytesFromFile(unsigned char *fileContent, char *arr, int init, int size) {
-    char auxArr[SECTION_PROPERTIES_SIZE_IN_BYTES];
-    int end = init + size - 1, index = 0;
-    for (int i = end; i >= init; i--) {
-        arr[index] = fileContent[i];
-        index++;
-    }
-    arr[index] = '\0';
-}
 
 //-----------------------------------------------------------
 
@@ -90,8 +82,8 @@ int convertMultipleBytesToDecimal (unsigned char *bytes, int size) {
 int getDecimalValueOfFileHeaderProperty (unsigned char *fileContent, HeaderProperties hp) {
     unsigned char headerProperty[hp.size];
     int initOffset = hp.offset,
-        endOffset = initOffset + hp.size - 1,
-        index = 0;
+            endOffset = initOffset + hp.size - 1,
+            index = 0;
 
     for (int i = endOffset; i >= initOffset; i--) {
         headerProperty[index++] = fileContent[i];
@@ -109,8 +101,8 @@ char convertIntToAlfabeticCharacter(int num) {
 }
 
 void convertDecimalToHexadecimal (int decimal, char *hexadecimal) {
-    int counter = 0, rest;
     char invertedHexNumber[BYTE_SIZE];
+    int counter = 0, rest;
 
     do {
         rest = decimal % 16;
@@ -123,11 +115,72 @@ void convertDecimalToHexadecimal (int decimal, char *hexadecimal) {
         invertedHexNumber[i] = '0';
     }
 
-    for (int j = 0; j < counter; j++) {
-        hexadecimal[counter - (j + 1)] = invertedHexNumber[j];
+    for (int j = 0; j < BYTE_SIZE; j++) {
+        hexadecimal[BYTE_SIZE - (j + 1)] = invertedHexNumber[j];
     }
-    hexadecimal[counter] = '\0';
+    hexadecimal[BYTE_SIZE] = '\0';
 }
+
+//-----------------------------------------------------------
+
+char *readBytesFromFile(unsigned char *fileContent, char *arr, int init, int size) {
+    char auxArr[SECTION_PROPERTIES_SIZE_IN_BYTES];
+    int end = init + size - 1, index = 0;
+    for (int i = end; i >= init; i--) {
+        arr[index] = fileContent[i];
+        index++;
+    }
+    arr[index] = '\0';
+}
+
+//----------------------------------------------------------
+
+int getShstrtabSectionInit (unsigned char *fileContent) {
+    int sectionIndex = FILE_HEADERS.e_shstrndx.decimalValue,
+        sectionInit = FILE_HEADERS.e_shoff.decimalValue + sectionIndex * SECTION_SIZE_IN_BYTES,
+        initOffset = sectionInit + START_OFFSET_OF_NAMES_IN_SECTION_SHSTRNDX;
+
+    char offset[SECTION_PROPERTIES_SIZE_IN_BYTES];
+    readBytesFromFile(fileContent, offset, initOffset, SECTION_PROPERTIES_SIZE_IN_BYTES);
+
+    return convertMultipleBytesToDecimal(offset, SECTION_PROPERTIES_SIZE_IN_BYTES);
+}
+
+int getNameOffset(unsigned char *fileContent, int sectionInit) {
+    char offset[SECTION_PROPERTIES_SIZE_IN_BYTES];
+    readBytesFromFile(fileContent, offset, sectionInit, SECTION_PROPERTIES_SIZE_IN_BYTES);
+
+    return convertMultipleBytesToDecimal(offset, SECTION_PROPERTIES_SIZE_IN_BYTES);
+}
+
+void getSectionName (unsigned char *fileContent, int sectionInit, char *name) {
+    int nameOffset = getNameOffset(fileContent, sectionInit);
+    int nameInit = SECTION_HEADERS.sh_name.offset + nameOffset;
+
+    int index = 0;
+    while((int)fileContent[nameInit + index] != 0) {
+        name[index] = fileContent[nameInit + index];
+        index++;
+    }
+    name[index] = '\0';
+}
+
+void getSectionHeaderProperty (unsigned char *fileContent, int sectionInit, char *property, HeaderProperties hp) {
+    unsigned char binaryValue[hp.size];
+    int init = sectionInit + hp.offset,
+        end = init + hp.size - 1,
+        index = 0;
+
+    for (int i = end; i >= init; i--) {
+        binaryValue[index] = fileContent[i];
+        index++;
+    }
+
+    hp.decimalValue = convertMultipleBytesToDecimal(binaryValue, hp.size);
+    convertDecimalToHexadecimal(hp.decimalValue, property);
+}
+
+//-----------------------------------------------------------
 
 void initializeFileHeaders(unsigned char *fileContent) {
     FILE_HEADERS.e_shoff.offset = 32;
@@ -143,79 +196,25 @@ void initializeFileHeaders(unsigned char *fileContent) {
     FILE_HEADERS.e_shstrndx.decimalValue = getDecimalValueOfFileHeaderProperty(fileContent, FILE_HEADERS.e_shstrndx);
 }
 
+void initializeSectionHeaders(unsigned char *fileContent) {
+    SECTION_HEADERS.sh_name.offset = getShstrtabSectionInit(fileContent);
+
+    SECTION_HEADERS.sh_addr.offset = 12;
+    SECTION_HEADERS.sh_addr.size = 4;
+
+    SECTION_HEADERS.sh_size.offset = 20;
+    SECTION_HEADERS.sh_size.size = 4;
+}
+
 //-----------------------------------------------------------
-
-int getShstrtabSectionInit (unsigned char *fileContent) {
-    int sectionIndex = FILE_HEADERS.e_shstrndx.decimalValue,
-        sectionInit = FILE_HEADERS.e_shoff.decimalValue + sectionIndex * SECTION_SIZE_IN_BYTES,
-        offsetInit = sectionInit + 16;
-
-    char offset[SECTION_PROPERTIES_SIZE_IN_BYTES];
-    readBytesFromFile(fileContent, offset, offsetInit, SECTION_PROPERTIES_SIZE_IN_BYTES);
-
-    return convertMultipleBytesToDecimal(offset, SECTION_PROPERTIES_SIZE_IN_BYTES);
-}
-
-int getNameOffset(unsigned char *fileContent, int sectionInit) {
-    char offset[SECTION_PROPERTIES_SIZE_IN_BYTES];
-    readBytesFromFile(fileContent, offset, sectionInit, SECTION_PROPERTIES_SIZE_IN_BYTES);
-
-    return convertMultipleBytesToDecimal(offset, SECTION_PROPERTIES_SIZE_IN_BYTES);
-}
-
-void setSectionName (char *name, unsigned char *fileContent, int sectionInit) {
-    int nameOffset = getNameOffset(fileContent, sectionInit);
-    int nameInit = getShstrtabSectionInit(fileContent) + nameOffset;
-
-    int index = 0;
-    while((int)fileContent[nameInit + index] != 0) {
-        name[index] = fileContent[nameInit + index];
-        index++;
-    }
-    name[index] = '\0';
-}
-
-void setSectionVMA (char *vma, unsigned char *fileContent, int sectionInit) {
-    unsigned char binaryVma[SECTION_PROPERTIES_SIZE_IN_BYTES];
-
-    int index = 0;
-    for (int i = sectionInit + 15; i >= sectionInit + 12; i--) {
-        binaryVma[index] = fileContent[i];
-        index++;
-    }
-
-    int decimalVma = convertMultipleBytesToDecimal(binaryVma, SECTION_PROPERTIES_SIZE_IN_BYTES);
-    convertDecimalToHexadecimal(decimalVma, vma);
-}
-
-void setSectionSize (char *size, unsigned char *fileContent, int sectionInit) {
-    unsigned char binarySize[SECTION_PROPERTIES_SIZE_IN_BYTES];
-
-    int index = 0;
-    for (int i = sectionInit + 23; i >= sectionInit + 20; i--) {
-        binarySize[index] = fileContent[i];
-        index++;
-    }
-
-    int decimalSize = convertMultipleBytesToDecimal(binarySize, SECTION_PROPERTIES_SIZE_IN_BYTES);
-    convertDecimalToHexadecimal(decimalSize, size);
-}
-
-int getSizeOfString (char *str) {
-    int size = 0;
-    while (str[size] != '\0') {
-        size++;
-    }
-    return size - 1;
-}
 
 Section getSection (unsigned char *fileContent, int sectionInit, int sectionIndex) {
     Section s;
-    char name[MAX_SECTION_NAME_SIZE], vma[BYTE_SIZE], size[BYTE_SIZE];
+    char name[MAX_SECTION_NAME_SIZE], vma[BYTE_SIZE + 1], size[BYTE_SIZE + 1];
 
-    setSectionName(&name, fileContent, sectionInit);
-    setSectionSize(&size, fileContent, sectionInit);
-    setSectionVMA(&vma, fileContent, sectionInit);
+    getSectionName(fileContent, sectionInit, &name);
+    getSectionHeaderProperty(fileContent, sectionInit, &size, SECTION_HEADERS.sh_size);
+    getSectionHeaderProperty(fileContent, sectionInit, &vma, SECTION_HEADERS.sh_addr);
 
     s.index = sectionIndex;
     s.name = name;
@@ -225,7 +224,7 @@ Section getSection (unsigned char *fileContent, int sectionInit, int sectionInde
     return s;
 }
 
-Section *buildAndPrintSectionsTable (unsigned char *fileContent) {
+Section *printSectionTable (unsigned char *fileContent) {
     int numberOfSections = FILE_HEADERS.e_shnum.decimalValue,
         sectionInit = FILE_HEADERS.e_shoff.decimalValue;
     Section section;
@@ -241,11 +240,16 @@ Section *buildAndPrintSectionsTable (unsigned char *fileContent) {
 }
 
 //-----------------------------------------------------------
+
+char removeTraceFromFlag(char *flag) {
+    return flag[0] == '-' ?  flag[1] : flag[0];
+}
+
 void executeDecodification (unsigned char *fileContent, char *flagWithTracePrefix) {
     char flag = removeTraceFromFlag(flagWithTracePrefix);
 
     if (flag == FLAGS.printSectionTable) {
-        buildAndPrintSectionsTable(fileContent);
+        printSectionTable(fileContent);
     }
 
     else if (flag == FLAGS.printSymbolTable) {
@@ -256,9 +260,10 @@ void executeDecodification (unsigned char *fileContent, char *flagWithTracePrefi
         // TODO: implement getTextSection()
     }
 }
+
 //-----------------------------------------------------------
 int main(int argc, char *argv[]) {
-    initializeExecutionFlags();
+    initializeCommandFlags();
 
     // char *executionOption = argv[1];
     char *flag = "-h";
@@ -273,6 +278,7 @@ int main(int argc, char *argv[]) {
     read(file, fileContent, MAX_FILE_SIZE_IN_BYTES);
 
     initializeFileHeaders(fileContent);
+    initializeSectionHeaders(fileContent);
 
     executeDecodification(fileContent, flag);
 
