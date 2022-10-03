@@ -106,14 +106,6 @@ int stringIsEqual (const unsigned char *str1, const unsigned char *str2) {
     return acc;
 }
 
-void addShiftInString (unsigned char *str, int index) {
-    int i;
-    for (i = getStringSize(str); i >= index; i--) {
-        str[i + 1] = str[i];
-    }
-    str[index] = ' ';
-}
-
 void addLeftZeroInString (unsigned char *str, int strLength) {
     int numberOfZero = strLength - getStringSize(str);
     unsigned char aux[strLength];
@@ -312,10 +304,6 @@ int getSectionOffset (int sectionIndex) {
     return FILE_HEADERS.e_shoff.decimalValue + sectionIndex * SECTION_SIZE_IN_BYTES;
 }
 
-int getSectionEnd (int sectionInit, int sectionSize) {
-    return sectionInit + sectionSize;
-}
-
 int getShstrtabSectionInit (unsigned char *fileContent) {
     int sectionIndex = FILE_HEADERS.e_shstrndx.decimalValue,
         sectionInit = getSectionOffset(sectionIndex),
@@ -336,6 +324,7 @@ int getNameOffset (unsigned char *fileContent, int sectionInit) {
 
 int getNameInAnotherSection (unsigned char *fileContent, int sectionInit, int nameOffset, char *name) {
     int nameInit = sectionInit + nameOffset;
+
     if ((int)fileContent[nameInit] == 0) nameInit++;
 
     int index = 0;
@@ -439,7 +428,9 @@ Section *printSectionTable (unsigned char *fileContent) {
         writeBreakLine();
         write(STDOUT_FILENO, s.index.stringValue, getStringSize(s.index.stringValue));
         writeTab();
-        write(STDOUT_FILENO, s.name, getStringSize(s.name));
+        if (i > 0) {
+            write(STDOUT_FILENO, s.name, getStringSize(s.name));
+        }
         writeTab();
         write(STDOUT_FILENO, s.size.hexadecimalValue, getStringSize(s.size.hexadecimalValue));
         writeTab();
@@ -447,6 +438,9 @@ Section *printSectionTable (unsigned char *fileContent) {
 
         sectionInit += SECTION_SIZE_IN_BYTES;
     }
+
+    writeBreakLine();
+    writeBreakLine();
 }
 
 //-----------------------------------------------------------
