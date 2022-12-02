@@ -7,48 +7,63 @@ stack:
 //----------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------
 .set BASE_ADDRESS, 0xFFFF0100
+.set STACK_POINTER_BASE_ADDRESS, 0xFFFF0400
+
 .set GOAL_X_COORD, 73
 .set GOAL_Z_COORD, -19
 
-.set SYSCALL_SET_ENGINE_AND_STEERING 10
-.set SYSCALL_SET_HANDBREAK 11
-.set SYSCALL_GET_POSITION 15
+.set SYSCALL_SET_ENGINE_AND_STEERING, 10
+.set SYSCALL_SET_HANDBREAK, 11
+.set SYSCALL_GET_POSITION, 15
 //----------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------
 Syscall_set_engine_and_steering:
-    # a0 -> movement direction (-1 = back; 0 = stop; 1 = forward)
-    # a1 -> movement angle (negative values = turn left; positive values = turn right)
-    la t0, BASE_ADDRESS
+    li t0, BASE_ADDRESS
+    # validating params received (a0 and a1)
+    ## case a0 is outside valid range [-1, 1]
+    li t1, -1
+    blt a0, t1, returnParamOutsideRangeError
+    li t1, 1
+    bgt a0, t1, returnParamOutsideRangeError
+    ## case a1 is outside valid range [-127, 127]
+    li t1, -127
+    blt a1, t1, returnParamOutsideRangeError
+    li t1, 127
+    bgt a1, t1, returnParamOutsideRangeError
+    # changing movement direction ang angle
     sb a0, 0x21(t0)
     sb a1, 0x20(t0)
+    li a0, 0
     ret
 
 Syscall_set_handbreak:
-    # a0 -> handbreak control (1 = enable; 0 = disable)
-    la t0, BASE_ADDRESS
+    li t0, BASE_ADDRESS
     sb a0, 0x22(t0)
     ret
 
 Syscall_get_position:
-    # a0 -> x coord.
-    # a2 -> z coord.
-    la t0, BASE_ADDRESS
+    li t0, BASE_ADDRESS
     li t1, 1
     sb t1, (t0)
     lw a0, 0x10(t0)
     lw a2, 0x18(t0)
     ret
 
+returnParamOutsideRangeError:
+    li a0, -1
+    jal 1f
+
 int_handler:
-  la t0, SYSCALL_SET_ENGINE_AND_STEERING
+  li t0, SYSCALL_SET_ENGINE_AND_STEERING
   beq a7, t0, Syscall_set_engine_and_steering
 
-  la t0, SYSCALL_SET_HANDBREAK
+  li t0, SYSCALL_SET_HANDBREAK
   beq a7, t0, Syscall_set_handbreak
   
-  la t0, SYSCALL_GET_POSITION
+  li t0, SYSCALL_GET_POSITION
   beq a7, t0, Syscall_get_position
   
+  1:
   csrr t0, mepc  # carrega endereço de retorno (endereço da instrução que invocou a syscall)  
   addi t0, t0, 4 # soma 4 no endereço de retorno (para retornar após a ecall) 
   csrw mepc, t0  # armazena endereço de retorno de volta no mepc
@@ -56,36 +71,47 @@ int_handler:
 //----------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------
 getXAndZCoords:
-    la a7, SYSCALL_GET_POSITION
+    # a0 <- x coord.
+    # a2 <- z coord.
+    li a7, SYSCALL_GET_POSITION
     ecall
     ret
 moveForward:
+    # a0 -> movement direction (-1 = back; 0 = stop; 1 = forward)
+    # a1 -> movement angle (negative values = turn left; positive values = turn right)
     li a0, 1
     li a1, 0
-    la a7, SYSCALL_SET_ENGINE_AND_STEERING
+    li a7, SYSCALL_SET_ENGINE_AND_STEERING
     ecall
     ret
 turnLeft:
+    # a0 -> movement direction (-1 = back; 0 = stop; 1 = forward)
+    # a1 -> movement angle (negative values = turn left; positive values = turn right)
     li a0, 1
-    li a1, -15
-    la a7, SYSCALL_SET_ENGINE_AND_STEERING
+    li a1, -14
+    li a7, SYSCALL_SET_ENGINE_AND_STEERING
     ecall
     ret
 turnRight:
+    # a0 -> movement direction (-1 = back; 0 = stop; 1 = forward)
+    # a1 -> movement angle (negative values = turn left; positive values = turn right)
     li a0, 1
-    li a1, 15
-    la a7, SYSCALL_SET_ENGINE_AND_STEERING
+    li a1, 14
+    li a7, SYSCALL_SET_ENGINE_AND_STEERING
     ecall
     ret
 stop:
+    # a0 -> movement direction (-1 = back; 0 = stop; 1 = forward)
+    # a1 -> movement angle (negative values = turn left; positive values = turn right)
     li a0, 0
     li a1, 0
-    la a7, SYSCALL_SET_ENGINE_AND_STEERING
+    li a7, SYSCALL_SET_ENGINE_AND_STEERING
     ecall
     ret
 enableHandBreak:
+    # a0 -> handbreak control (1 = enable; 0 = disable)
     li a0, 1
-    la a7, SYSCALL_SET_HANDBREAK
+    li a7, SYSCALL_SET_HANDBREAK
     ecall
     ret
 //----------------------------------------------------------------------------------------
@@ -168,8 +194,8 @@ _start:
     li t2, ~0x1800
     and t1, t1, t2
     csrw mstatus, t1 
-    # Ajusta Pilha
-    li sp, 0x07FFFFFC
+    # setting program stack
+    li sp, STACK_POINTER_BASE_ADDRESS
     la t0, stack
     csrw mscratch, t0
     # calling user_main function
@@ -177,7 +203,6 @@ _start:
     la t0, user_main  
     csrw mepc, t0
     mret
-    jal user_main
 
 .globl logica_controle
 logica_controle:
@@ -185,7 +210,7 @@ logica_controle:
     - movement vector (from the previous to the current position of the car)
     - goal vector (from the car's current position to its goal point)
     about registers, we will use:
-    - s0 -> BASE_ADDRESS
+    - s0 -> internal product between movement and goal vector
     - s1 -> x coord. of actual before sleep
     - s2 -> z coord. of actual before sleep
     - s3 -> x coord. of position after sleep
@@ -195,7 +220,7 @@ logica_controle:
     - s7 -> x coord. of goal vector
     - s8 -> y coord. of goal vector */
 
-    jal moveForward
+    jal turnLeft
 
     1:
     # getting actual car coord.
@@ -227,15 +252,16 @@ logica_controle:
     # rotate goal vector
     jal rotateGoalVector90Degrees
 
-    # calculating <goal vector, movement vector>
+    # calculating <goal vector, movement vector> and saving it in s0
     jal getInternalProduct
+    mv s0, a0
 
     # changing wheel direction
-    beqz a0, 1f
-    bgt a0, zero, turnLeft
-    blt a0, zero, turnRight
+    beqz s0, 1f
+    bgt s0, zero, turnLeft
+    blt s0, zero, turnRight
 
-    # keep in loop if wheel direction is different than goal direction
+    # keep in loop if wheel direction is different than goal direction */
     jal 1b
 
     1:
