@@ -1,0 +1,9 @@
+
+bin/test-17.x: file format elf32-littleriscv
+
+SYMBOL TABLE:
+00011100 l .text 00000000 assembly
+0001210a l .bss 00000000 y
+000110d4 g .text 00000000 _start
+00012109 g .bss 00000000 loop
+0001210e g .bss 00000000 there

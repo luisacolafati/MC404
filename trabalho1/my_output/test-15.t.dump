@@ -1,0 +1,14 @@
+
+bin/test-15.x: file format elf32-littleriscv
+
+SYMBOL TABLE:
+0001211e l .bss 00000000 assembly
+00012110 l .bss 00000000 mc404
+000110d8 l .text 00000000 people
+000110f8 l .text 00000000 rocks
+00011104 l .text 00000000 the
+0001211a l .bss 00000000 two
+00011108 l .text 00000000 y
+000110d4 g .text 00000000 _start
+00012116 g .bss 00000000 l
+00012112 g .bss 00000000 loop

@@ -1,0 +1,14 @@
+
+bin/test-38.x: file format elf32-littleriscv
+
+SYMBOL TABLE:
+000110e8 l .text 00000000 IC
+00012115 l .bss 00000000 discovery
+00000040 l *ABS* 00000000 fi
+000110e4 l .text 00000000 in
+00012118 l .bss 00000000 k
+00012117 l .bss 00000000 loop
+00000053 l *ABS* 00000000 the
+00012119 l .bss 00000000 y
+000110d4 g .text 00000000 _start
+00012111 g .bss 00000000 then

@@ -1,0 +1,39 @@
+ler 20 bytes de entrada (4 números de 4 dígitos, separados com 3 espaços, com um \n no final)
+
+salvar input_address (endereço de onde os bytes foram salvos sequencialmente na memória)
+
+carregar o byte salvo no endereço input_address num registrador temporário
+
+salvar 0 num registrador temporário a ser usado como indicador do índice do número lido (1 a 4) 
+
+somar 1 no registrador índice
+
+fazer as seguintes checagens:
+    
+    - se o byte for um espaço (obs: procurar código ascii do space):
+        - pular para a função que calcula raiz quadrada
+        - salvar o resultado da função num registrador temporário
+        - imprimir o resultado da função na tela
+    
+    - se o byte for um /n:
+        - encerrar o programa
+
+    - caso contrário:
+        - calcular o valor decimal do byte lido
+        - multiplicar esse valor por 10^(4 - registrador índice)
+        - somar esse valor num registrador temporário
+
+------------------------------------------------------------------------------------------------
+
+função para cálculo de valor decimal de um char
+
+carregar o byte (char) da memória
+salvar o valor desse byte - 48 num registrador (valor decimal do char)
+somar esse valor decimal * x num outro registrador, sendo x o valor salvo num registrador temporário
+    - obs: no início do programa, usar x = 1000
+dividir o valor de x por 10
+
+Resumindo:
+t4 -> 'c' - 48, onde c é o caracter lido da memória
+t5 -> t4 * x
+x / 10

@@ -1,0 +1,9 @@
+
+bin/test-39.x: file format elf32-littleriscv
+
+SYMBOL TABLE:
+00012107 l .data 00000000 in
+000120fe l .data 00000000 then
+000120ff l .data 00000000 types
+000110d4 g .text 00000000 _start
+00012102 g .data 00000000 of

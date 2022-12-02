@@ -1,0 +1,14 @@
+
+bin/test-29.x: file format elf32-littleriscv
+
+SYMBOL TABLE:
+00012113 l .data 00000000 are
+0001110c l .text 00000000 discovery
+000110dc l .text 00000000 loop
+0001211b l .data 00000000 m
+00011104 l .text 00000000 mc404
+00012112 l .data 00000000 of
+000110f0 l .text 00000000 then
+000110d4 g .text 00000000 _start
+00012111 g .data 00000000 fi
+00012116 g .data 00000000 y

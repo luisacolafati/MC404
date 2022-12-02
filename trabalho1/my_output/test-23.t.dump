@@ -1,0 +1,8 @@
+
+bin/test-23.x: file format elf32-littleriscv
+
+SYMBOL TABLE:
+00012103 l .data 00000000 assembly
+00012107 l .data 00000000 fi
+000110d4 g .text 00000000 _start
+00012101 g .data 00000000 in

@@ -1,0 +1,10 @@
+
+bin/test-16.x: file format elf32-littleriscv
+
+SYMBOL TABLE:
+000110dc l .text 00000000 IC
+00012115 l .bss 00000000 fi
+000110f4 l .text 00000000 of
+00012110 l .bss 00000000 world
+000110d4 g .text 00000000 _start
+00012119 g .bss 00000000 people

@@ -1,0 +1,12 @@
+
+bin/test-02.x: file format elf32-littleriscv
+
+SYMBOL TABLE:
+000110f0 l .text 00000000 IC
+000120fd l .data 00000000 are
+000110d8 l .text 00000000 assembly
+000110dc l .text 00000000 rocks
+000110e0 l .text 00000000 unicamp
+00012102 l .data 00000000 z
+000110d4 g .text 00000000 _start
+00012103 g .data 00000000 fi

@@ -1,0 +1,18 @@
+
+bin/test-19.x: file format elf32-littleriscv
+
+SYMBOL TABLE:
+0001210f l .data 00000000 IC
+00000016 l *ABS* 00000000 assembly
+00012117 l .data 00000000 discovery
+0000004f l *ABS* 00000000 in
+000110ec l .text 00000000 l
+0000005d l *ABS* 00000000 loop
+000110e8 l .text 00000000 m
+000110e0 l .text 00000000 magic
+000110dc l .text 00000000 monitor
+000110e4 l .text 00000000 there
+00012115 l .data 00000000 two
+000110d4 g .text 00000000 _start
+00012116 g .data 00000000 fi
+00012112 g .data 00000000 then

@@ -1,0 +1,7 @@
+
+bin/test-33.x: file format elf32-littleriscv
+
+SYMBOL TABLE:
+00000049 l *ABS* 00000000 are
+000110c4 l .text 00000000 then
+000110b4 g .text 00000000 _start
