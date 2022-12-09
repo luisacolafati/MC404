@@ -151,8 +151,6 @@ Syscall_read:
     bnez t3, 3b
     # reading byte from serial port
     lb t3, 0x03(t0)
-    # ignoring initial zeroes
-    beqz t3, 2b
     # ignoring empty spaces
     beq t3, t2, 4f
     # storing byte read
@@ -163,6 +161,7 @@ Syscall_read:
     bne t3, t1, 2b
     # exit if read '\n'
     sb zero, -1(a1) # before, save 0 in end of buffer
+    # finishing reading
     j restoreContextAndFinishSyscall
 
 Syscall_write:
@@ -174,25 +173,25 @@ Syscall_write:
     lb t2, 0(a1)
     beqz t2, 4f
     # saving buffer byte in serial port 
-    lb t2, 0x02(t0)
+    sb t2, 0x01(t0)
     # triggers the serial port to write
-    li t3, 1
-    sb t3, 0(t0)
-    # waiting for serial port
+    li t2, 1
+    sb t2, 0(t0)
     3:
-    lb t3, 0(t0)
-    bnez t3, 3b
+    # waiting for serial port
+    lb t2, 0(t0)
+    bnez t2, 3b
     # reading next byte in buffer
     addi a1, a1, 1
     j 2b
     4:
     # adding breakline in end of buffer
-    lb t1, 0x02(t0)
-    li t3, 1
-    sb t3, 0(t0)
+    sb t1, 0x01(t0)
+    li t2, 1
+    sb t2, 0(t0)
     5:
-    lb t3, 0(t0)
-    bnez t3, 5b
+    lb t2, 0(t0)
+    bnez t2, 5b
     # finishing writing
     j restoreContextAndFinishSyscall
 
