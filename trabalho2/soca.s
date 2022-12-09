@@ -151,6 +151,8 @@ Syscall_read:
     bnez t3, 3b
     # reading byte from serial port
     lb t3, 0x03(t0)
+    # ignoring initial zeroes
+    beqz t3, 2b
     # ignoring empty spaces
     beq t3, t2, 4f
     # storing byte read
