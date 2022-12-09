@@ -1,9 +1,12 @@
 .bss
 stack:
+.skip 1024
+stack_end:
 //----------------------------------------------------------------------------------------
 .text
 //----------------------------------------------------------------------------------------
 .set STACK_POINTER_ADDRESS, 0x07FFFFFC
+.set GENERAL_PURPOSE_TIMER_ADDRESS, 0xFFFF0100
 .set SELF_DRIVING_CAR_ADDRESS, 0xFFFF0300
 .set SERIAL_IO_ADDRESS, 0xFFFF0500
 .set CANVAS_ADDRESS, 0xFFFF0700
@@ -220,15 +223,15 @@ Syscall_draw_line:
     j restoreContextAndFinishSyscall
 
 Syscall_get_systime:
-    li t0, SELF_DRIVING_CAR_ADDRESS
-    # activate GPS
+    li t0, GENERAL_PURPOSE_TIMER_ADDRESS
+    # activate GPT
     li t1, 1
     sb t1, 0(t0)
     # waiting for measure
     2:
     lb t1, 0(t0)
     bnez t1, 2b
-    # reading GPS measure from memory
+    # reading GPT measure from memory
     lw a0, 0x04(t0)
     j restoreContextAndFinishSyscall
 //----------------------------------------------------------------------------------------
@@ -284,7 +287,7 @@ _start:
     csrw mstatus, t1 
     # setting program stack
     li sp, STACK_POINTER_ADDRESS
-    la t0, stack
+    la t0, stack_end
     csrw mscratch, t0
     # calling main function
     # (loading the user software entry point into mepc)
